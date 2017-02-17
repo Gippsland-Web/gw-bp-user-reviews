@@ -2,20 +2,15 @@
 /*
 
  @wordpress-plugin
- Plugin Name:       BP Member Reviews
- Plugin URI:        https://wordpress.org/plugins/bp-user-reviews/
+ Plugin Name:       GW BP Member Reviews
+ Plugin URI:        https://github.com/DarkLotus/bp-user-reviews-gw
  Description:       BuddyPress plugin to enable reviews and ratings of members.
-<<<<<<< .mine
- Version:           1.1.5
-||||||| .r1535042
- Version:           1.1.3
-=======
- Version:           1.1.4
->>>>>>> .r1553604
- Author:            wordplus, sooskriszta
- Author URI:        https://profiles.wordpress.org/wordplus/
+ Version:           1.2
+ Author:            wordplus, sooskriszta, DarkLotus
+ Author URI:        https://github.com/DarkLotus/bp-user-reviews-gw
  Text Domain:       bp-user-reviews
  Domain Path:       /languages
+ GitHub Plugin URI: /darklotus/bp-user-reviews-gw
  */
 
 // Exit if accessed directly
@@ -36,7 +31,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
             $this->url          = plugin_dir_url (__FILE__);
             $this->path         = plugin_dir_path(__FILE__);
             $this->post_type    = 'bp-user-reviews';
-            $this->version      = '1.1.5';
+            $this->version      = '1.2';
 
             $defaults = array(
                 'access'     => 'registered',
@@ -65,6 +60,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
                 add_action('bp_enqueue_scripts', array($this, 'screen_scripts'));
                 add_action('wp_head', array($this, 'styles'));
                 add_action('wp_ajax_bp_user_review', array($this, 'ajax_review'));
+                add_action('wp_ajax_bp_user_review_response',array($this,'ajax_review_response'));
                 if ($this->settings['access'] == 'all') {
                     add_action('wp_ajax_nopriv_bp_user_review', array($this, 'ajax_review'));
                 }
@@ -184,9 +180,55 @@ if ( ! class_exists('BP_User_Reviews') ) :
         }
 
         /**
+         * Process form review response form
+         */
+        public function ajax_review_response(){
+            $review_id = intval($_POST['review_id']);
+            $user_id = intval($_POST['user_id']);
+            if( !wp_verify_nonce( $_POST['_wpnonce'], 'bp-user-review-new-response-'.$user_id ) ) die();
+
+           
+            $response = array(
+                'result' => true,
+                'errors' => array()
+            );
+
+            if(is_user_logged_in() && (get_post_meta($review_id,'user_id',true) != get_current_user_id())){
+                $response['result'] = false;
+                $response['errors'][] = __('You can only respond to reviews on yourself.', 'bp-user-reviews');
+            }
+            
+            //get the review from the ID sent in post
+            //Check the review owner is the current user 
+            //post comment as meta
+
+            if(get_post_meta($review_id,'comment',true) == true) {
+                $response['result'] = false;
+                $response['errors'][] = 'You can only leave one comment per review';
+                }
+
+                
+            if(!isset($_POST['response']) || strlen($_POST['response']) < $this->settings['min_length'])
+            {
+                $response['result'] = false;
+                $response['errors'][] = sprintf(__('Review must be at least %s characters', 'bp-user-reviews'), $this->settings['min_length']);
+            }
+
+
+            if($response['result'] === true){
+                update_post_meta($review_id,'comment',esc_attr($_POST['response'])); 
+            }
+
+            wp_send_json($response);
+            die();
+        }
+
+
+        /**
          * Process form
          */
         public function ajax_review(){
+            var_dump($_POST);
             $user_id = intval($_POST['user_id']);
             if( !wp_verify_nonce( $_POST['_wpnonce'], 'bp-user-review-new-'.$user_id ) ) die();
 
@@ -696,6 +738,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
 
             include($this->path . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'review-list.php');
         }
+
 
         public static function calc_rating($user_id){
             $reviews = new WP_Query(array(

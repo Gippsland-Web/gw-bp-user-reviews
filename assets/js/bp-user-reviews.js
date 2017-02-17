@@ -25,6 +25,28 @@
             }
         );
 
+        $('form.bp-user-reviews-response').submit(function (event) {
+                event.preventDefault();
+                $('.bp-user-review-message').remove();
+                $.post(ajax_url, $(this).serialize(), function (data) {
+
+                    if(data.result == false){
+                        var html = '<div id="message" class="bp-user-review-message error"><p>';
+                        $.each(data.errors, function () {
+                            html += this+'<br>';
+                        });
+                        html += '</p></div>';
+                        $(html).insertAfter($('form.bp-user-reviews'));
+                    } else {
+                        var html = '<div id="message" class="bp-user-review-message success"><p>'+messages.success+'</p></div>';
+                        $(html).insertAfter($('form.bp-user-reviews'));
+                        $('form.bp-user-reviews').slideUp();
+                    }
+                });
+            }
+        );
+
+
         $('form.bp-user-reviews').on('click', 'span.star', function (event) {
             event.preventDefault();
             var p = $(this).parent().parent();

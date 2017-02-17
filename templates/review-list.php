@@ -61,7 +61,13 @@ defined( 'ABSPATH' ) || exit; ?>
                 <?php } ?>
                 <div class="text">
                     <?php echo $post->review; ?>
+                    <?php 
+                    include($this->path . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'review-response-form.php');    
+                ?>
                 </div>
+                
+                
+            
             </div>
         </div>
     <?php } } else {
