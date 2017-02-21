@@ -7,7 +7,37 @@ defined( 'ABSPATH' ) || exit; ?>
 if(get_post_meta(get_the_ID(),'comment',true) != false) {
     echo('<div><p><strong>'.bp_core_get_username(bp_displayed_user_id()).'</strong>: '.get_post_meta(get_the_ID(),'comment',true).'</p></div>');
 } elseif($this->settings['review'] == 'yes' && is_user_logged_in() && bp_displayed_user_id() == get_current_user_id()){ ?>
-<form class="bp-user-reviews-response">
+
+
+<script>
+(function ($) {
+    
+
+    $(document).ready(function () {
+        $('form.bp-user-reviews-response<?php echo get_the_ID() ?>').submit(function (event) {
+                event.preventDefault();
+                $('.bp-user-review-message').remove();
+                $.post(BP_User_Reviews.ajax_url, $(this).serialize(), function (data) {
+
+                    if(data.result == false){
+                        var html = '<div id="message" class="bp-user-review-message error"><p>';
+                        $.each(data.errors, function () {
+                            html += this+'<br>';
+                        });
+                        html += '</p></div>';
+                        $(html).insertAfter($('form.bp-user-reviews-response<?php echo get_the_ID() ?>'));
+                    } else {
+                        var html = '<div id="message" class="bp-user-review-message success"><p>'+BP_User_Reviews.messages.success+'</p></div>';
+                        $(html).insertAfter($('form.bp-user-reviews-response<?php echo get_the_ID() ?>'));
+                        $('form.bp-user-reviews-response<?php echo get_the_ID() ?>').slideUp();
+                    }
+                });
+            }
+        );
+    });
+})(jQuery)
+</script>
+<form class="bp-user-reviews-response<?php echo get_the_ID() ?>">
 
 
             <h2><?php _e('Add Response', 'bp-user-reviews-response'); ?></label></h2>
@@ -19,3 +49,9 @@ if(get_post_meta(get_the_ID(),'comment',true) != false) {
     <input type="submit" value="Submit">   
 </form>
 <?php } ?>
+
+
+
+
+
+

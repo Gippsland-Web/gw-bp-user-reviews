@@ -1,37 +1,39 @@
 <?php
 /*
-
  @wordpress-plugin
- Plugin Name:       GW BP Member Reviews
- Plugin URI:        https://github.com/DarkLotus/bp-user-reviews-gw
+ Plugin Name:       BP Member Reviews
+ Plugin URI:        https://wordpress.org/plugins/bp-user-reviews/
  Description:       BuddyPress plugin to enable reviews and ratings of members.
- Version:           1.2
- Author:            wordplus, sooskriszta, DarkLotus
- Author URI:        https://github.com/DarkLotus/bp-user-reviews-gw
+ Version:           1.2.5
+ Author:            wordplus, sooskriszta
+ Author URI:        https://profiles.wordpress.org/wordplus/
  Text Domain:       bp-user-reviews
  Domain Path:       /languages
- GitHub Plugin URI: /darklotus/bp-user-reviews-gw
  */
 
 // Exit if accessed directly
 defined( 'ABSPATH' ) || exit;
 
-if ( ! class_exists('BP_User_Reviews') ) :
+if ( ! class_exists('BP_Member_Reviews') ) :
 
-    class BP_User_Reviews
-    { 
+    class BP_Member_Reviews
+    {
 
         public $url;
+
         public $path;
+
         public $post_type;
+
         public $settings;
+
         public $version;
 
         public function __construct() {
             $this->url          = plugin_dir_url (__FILE__);
             $this->path         = plugin_dir_path(__FILE__);
             $this->post_type    = 'bp-user-reviews';
-            $this->version      = '1.2';
+            $this->version      = '1.2.5';
 
             $defaults = array(
                 'access'     => 'registered',
@@ -56,40 +58,33 @@ if ( ! class_exists('BP_User_Reviews') ) :
              * Frontend Side
              */
             if(apply_filters('bp_user_reviews_visible', true)) {
-                add_action('bp_setup_nav', array($this, 'add_tabs'), 100);
-                add_action('bp_enqueue_scripts', array($this, 'screen_scripts'));
-                add_action('wp_head', array($this, 'styles'));
-                add_action('wp_ajax_bp_user_review', array($this, 'ajax_review'));
+                add_action('bp_setup_nav',          	 array($this, 'add_tabs'), 100);
+                add_action('bp_enqueue_scripts',    	 array($this, 'bp_screen_scripts'));
+                add_action('wp_enqueue_scripts',    	 array($this, 'screen_scripts'));
+                add_action('wp_head',               	 array($this, 'styles'));
+                add_action('wp_ajax_bp_user_review', 	 array($this, 'ajax_review'));
                 add_action('wp_ajax_bp_user_review_response',array($this,'ajax_review_response'));
                 if ($this->settings['access'] == 'all') {
                     add_action('wp_ajax_nopriv_bp_user_review', array($this, 'ajax_review'));
                 }
             }
 
-            if(apply_filters('bp_user_reviews_bp_profile', true)) {
-                add_action('bp_profile_header_meta', array($this, 'embed_rating'));
-            }
+            add_action('bp_profile_header_meta', 	   array($this, 'embed_rating'));
 
-            if(apply_filters('bp_user_reviews_bp_directory', true)) {
-                add_action('bp_directory_members_actions', array($this, 'ember_rating_directory'));
-            }
+            add_action('bp_directory_members_actions', array($this, 'ember_rating_directory'));
 
-            if(apply_filters('bp_user_reviews_bbpress_reply', true)){
-                add_action('bbp_theme_after_reply_author_details',      array($this, 'ember_forum_post') );
-            }
-
-
+            add_action('bbp_theme_after_reply_author_details',   array($this, 'ember_forum_post') );
 
             /**
              * Admin side
              */
-            add_action( 'admin_menu',                               array($this, 'settings_page') );
-            add_action( 'admin_enqueue_scripts',                    array($this, 'admin_screen_scripts') );
-            add_action( 'add_meta_boxes',                           array($this, 'register_meta_boxes') );
-            add_action( 'save_post',                                array($this, 'save_meta_box') );
-            add_action( 'admin_footer-edit.php',                    array($this, 'append_post_status_listing') );
-            add_action( 'admin_footer-post.php',                    array($this, 'append_post_status_list') );
-            add_action( 'admin_footer-post-new.php',                array($this, 'append_post_status_list') );
+            add_action( 'admin_menu',                                array($this, 'settings_page') );
+            add_action( 'admin_enqueue_scripts',                     array($this, 'admin_screen_scripts') );
+            add_action( 'add_meta_boxes',                            array($this, 'register_meta_boxes') );
+            add_action( 'save_post',                                 array($this, 'save_meta_box') );
+            add_action( 'admin_footer-edit.php',                     array($this, 'append_post_status_listing') );
+            add_action( 'admin_footer-post.php',                     array($this, 'append_post_status_list') );
+            add_action( 'admin_footer-post-new.php',                 array($this, 'append_post_status_list') );
             add_action( 'manage_posts_custom_column',                array($this, 'review_columns'), 10, 2 );
             add_filter( 'post_row_actions',                          array($this, 'review_actions') );
             add_action( 'post_submitbox_minor_actions',              array($this, 'spam_button') );
@@ -99,7 +94,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
             add_action( 'post_action_publish',                       array($this, 'publish'), 10, 1 );
 
 
-            add_filter( 'display_post_states',                      array($this, 'new_states') );
+            add_filter( 'display_post_states',                       array($this, 'new_states') );
             add_filter( 'manage_'.$this->post_type.'_posts_columns', array($this, 'add_review_columns') );
             add_action( 'post_action_publish',                       array($this, 'publish'), 10, 1 );
             add_action( 'admin_init',                                array($this, 'post_type_label'));
@@ -180,55 +175,9 @@ if ( ! class_exists('BP_User_Reviews') ) :
         }
 
         /**
-         * Process form review response form
-         */
-        public function ajax_review_response(){
-            $review_id = intval($_POST['review_id']);
-            $user_id = intval($_POST['user_id']);
-            if( !wp_verify_nonce( $_POST['_wpnonce'], 'bp-user-review-new-response-'.$user_id ) ) die();
-
-           
-            $response = array(
-                'result' => true,
-                'errors' => array()
-            );
-
-            if(is_user_logged_in() && (get_post_meta($review_id,'user_id',true) != get_current_user_id())){
-                $response['result'] = false;
-                $response['errors'][] = __('You can only respond to reviews on yourself.', 'bp-user-reviews');
-            }
-            
-            //get the review from the ID sent in post
-            //Check the review owner is the current user 
-            //post comment as meta
-
-            if(get_post_meta($review_id,'comment',true) == true) {
-                $response['result'] = false;
-                $response['errors'][] = 'You can only leave one comment per review';
-                }
-
-                
-            if(!isset($_POST['response']) || strlen($_POST['response']) < $this->settings['min_length'])
-            {
-                $response['result'] = false;
-                $response['errors'][] = sprintf(__('Review must be at least %s characters', 'bp-user-reviews'), $this->settings['min_length']);
-            }
-
-
-            if($response['result'] === true){
-                update_post_meta($review_id,'comment',esc_attr($_POST['response'])); 
-            }
-
-            wp_send_json($response);
-            die();
-        }
-
-
-        /**
          * Process form
          */
         public function ajax_review(){
-            var_dump($_POST);
             $user_id = intval($_POST['user_id']);
             if( !wp_verify_nonce( $_POST['_wpnonce'], 'bp-user-review-new-'.$user_id ) ) die();
 
@@ -249,6 +198,11 @@ if ( ! class_exists('BP_User_Reviews') ) :
                 'errors' => array()
             );
 
+            if( ! apply_filters( 'bp_members_reviews_review_allowed', true, get_current_user_id(), $user_id ) ){
+                $response['result'] = false;
+                $response['errors'][] = __('You can not put review for this user', 'bp-user-reviews');
+            }
+
             if(is_user_logged_in() && (get_current_user_id() == $user_id)){
                 $response['result'] = false;
                 $response['errors'][] = __('You can not put yourself reviews', 'bp-user-reviews');
@@ -261,7 +215,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
                 'guest'   => false
             );
 
-            if(!is_user_logged_in()){
+            if( ! is_user_logged_in() ){
                 $review_meta['guest'] = true;
 
                 if(!isset($_POST['name']) || empty($_POST['name'])){
@@ -317,7 +271,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
                     $review_meta['criterions'][$name] = (esc_attr($val) / $stars) * 100;
                 }
 
-                $review_meta['average'] = round(array_sum($review_meta['criterions']) / count($review_meta['criterions']));
+                $review_meta['average'] = round( array_sum($review_meta['criterions']) / count($review_meta['criterions']) );
             }
 
 
@@ -356,14 +310,59 @@ if ( ! class_exists('BP_User_Reviews') ) :
             }
 
             if($response['result'] === true){
-
-
                 $review_id = wp_insert_post($post);
 
                 foreach($review_meta as $key=>$value){
                     if(is_string($value)) $value = trim($value);
                     update_post_meta($review_id, $key, $value);
                 }
+            }
+
+            wp_send_json($response);
+            die();
+        }
+
+
+
+
+ /**
+         * Process form review response form
+         */
+        public function ajax_review_response(){
+            $review_id = intval($_POST['review_id']);
+            $user_id = intval($_POST['user_id']);
+            if( !wp_verify_nonce( $_POST['_wpnonce'], 'bp-user-review-new-response-'.$user_id ) ) die();
+
+           
+            $response = array(
+                'result' => true,
+                'errors' => array()
+            );
+
+            if(is_user_logged_in() && (get_post_meta($review_id,'user_id',true) != get_current_user_id())){
+                $response['result'] = false;
+                $response['errors'][] = __('You can only respond to reviews on yourself.', 'bp-user-reviews');
+            }
+            
+            //get the review from the ID sent in post
+            //Check the review owner is the current user 
+            //post comment as meta
+
+            if(get_post_meta($review_id,'comment',true) == true) {
+                $response['result'] = false;
+                $response['errors'][] = 'You can only leave one comment per review';
+                }
+
+                
+            if(!isset($_POST['response']) || strlen($_POST['response']) < $this->settings['min_length'])
+            {
+                $response['result'] = false;
+                $response['errors'][] = sprintf(__('Review must be at least %s characters', 'bp-user-reviews'), $this->settings['min_length']);
+            }
+
+
+            if($response['result'] === true){
+                update_post_meta($review_id,'comment',esc_attr($_POST['response'])); 
             }
 
             wp_send_json($response);
@@ -386,8 +385,8 @@ if ( ! class_exists('BP_User_Reviews') ) :
 
             if(is_email($user)){
                 $args['meta_query'][] = array(
-                        'key'     => 'email',
-                        'value'   => $user
+                    'key'     => 'email',
+                    'value'   => $user
                 );
 
                 unset($args['post_author']);
@@ -436,11 +435,10 @@ if ( ! class_exists('BP_User_Reviews') ) :
          * @param int $post_id Post ID
          */
         public function save_meta_box( $post_id ) {
-           # sprintf(__('Review must be at least %s characters', 'bp-user-reviews'), $this->settings['min_length'])
             /*
-         * We need to verify this came from the our screen and with proper authorization,
-         * because save_post can be triggered at other times.
-         */
+             * We need to verify this came from the our screen and with proper authorization,
+             * because save_post can be triggered at other times.
+             */
 
             // Check if our nonce is set.
             if ( ! isset( $_POST['bp-user-reviews-edit'] ) ) {
@@ -466,14 +464,47 @@ if ( ! class_exists('BP_User_Reviews') ) :
             if ( ! current_user_can( 'edit_post', $post_id ) ) {
                 return $post_id;
             }
-
+            $type = ( ! empty( get_post_meta($post_id, 'type', true) ) ) ? get_post_meta($post_id, 'type', true) : $this->settings['criterion'];
+            $stars = ( ! empty( get_post_meta($post_id, 'stars', true) ) ) ? get_post_meta($post_id, 'stars', true) : $this->settings['stars'];
             /* OK, it's safe for us to save the data now. */
+            update_post_meta($post_id, 'type', $type);
+            update_post_meta($post_id, 'stars', $stars);
 
             // Sanitize the user input.
             $review = sanitize_text_field( $_POST['review'] );
 
             // Update the meta field.
-            update_post_meta($post_id, 'review', $review);
+            update_post_meta( $post_id, 'review', $review );
+
+            // Sanitize the user input.
+            $user_id = sanitize_text_field( $_POST['user_id'] );
+
+            // Update the meta field.
+            update_post_meta( $post_id, 'user_id', $user_id );
+
+            if( $type == 'multiple' && isset($_POST['criterions']) && is_array($_POST['criterions'])){
+                update_post_meta( $post_id, 'criterions', $_POST['criterions'] );
+                $average =  round( array_sum($_POST['criterions']) / count($_POST['criterions']) );
+                update_post_meta( $post_id, 'average', $average );
+            } else if($type == 'single' && isset($_POST['total'])){
+                update_post_meta( $post_id, 'average', sanitize_text_field($_POST['total']) );
+            }
+
+
+            // Sanitize the user input.
+            $post_author = sanitize_text_field( $_POST['post_author'] );
+
+            remove_action( 'save_post',  array($this, 'save_meta_box') );
+
+            wp_update_post( array(
+                'ID'          => $post_id,
+                'post_author' => $post_author,
+            ) );
+
+            add_action( 'save_post',  array($this, 'save_meta_box') );
+
+            return false;
+
         }
 
         public function post_type_label($labels){
@@ -554,7 +585,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
                 }); 
                 </script>
                 ';
-          }
+            }
         }
         function append_post_status_listing(){
             if(!isset($_GET['post_type']) || ($_GET['post_type'] != $this->post_type)) return;
@@ -579,10 +610,14 @@ if ( ! class_exists('BP_User_Reviews') ) :
         }
 
         public function update_settings($settings){
-            foreach($settings['criterions'] as $index=>$value){
-                if(empty($value)) unset($settings['criterions'][$index]);
+            if(isset($settings['criterions']) && !empty($settings['criterions'])){
+                foreach($settings['criterions'] as $index=>$value){
+                    if(empty($value)) unset($settings['criterions'][$index]);
+                }
             }
+
             $this->settings = $settings;
+
             update_option('bp-user-reviews-settings', $this->settings);
         }
 
@@ -618,8 +653,25 @@ if ( ! class_exists('BP_User_Reviews') ) :
          * Add buddypress profile tab
          */
         public function add_tabs() {
+
+            $reviews = new WP_Query(array(
+                'post_type'   => 'bp-user-reviews',
+                'post_status' => 'publish',
+                'meta_query' => array(
+                    array(
+                        'key'     => 'user_id',
+                        'value'   => bp_displayed_user_id()
+                    )
+                ),
+                'posts_per_page'  => 0,
+            ));
+
+            $total = $reviews->found_posts;
+            $class = ( 0 === $total ) ? 'no-count' : 'count';
+            $title = sprintf( _x( 'Reviews <span class="%s">%s</span>', 'Reviews list sub nav', 'bp-user-reviews' ), esc_attr( $class ), bp_core_number_format( $total ) );
+
             bp_core_new_nav_item( array(
-                    'name'                    => __('Reviews', 'bp-user-reviews'),
+                    'name'                    => $title,
                     'slug'                    => 'reviews',
                     'screen_function'         => array($this, 'screen'),
                     'position'                => 20,
@@ -638,7 +690,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
             if($post->guest){
                 echo get_avatar($post->email, 25) . " " . $post->name;
             } else {
-                echo get_avatar($post->post_author, 25) . " " . bp_core_get_userlink( $post->post_author );
+                echo get_avatar($post->post_author, 25) . ' <a href="' . self::get_user_link( $post->post_author ) . '">' . self::get_user_display_name( $post->post_author ) .'</a>';
             }
         }
 
@@ -654,7 +706,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
         /**
          * Enqueue scripts
          */
-        public function screen_scripts() {
+        public function bp_screen_scripts() {
             if( bp_is_current_component('reviews') ) {
                 $translation_array = array(
                     'ajax_url'   => admin_url('admin-ajax.php'),
@@ -668,6 +720,12 @@ if ( ! class_exists('BP_User_Reviews') ) :
                 wp_enqueue_script( 'bp-user-reviews-js' );
             }
 
+        }
+
+        /**
+         * Enqueue scripts
+         */
+        public function screen_scripts() {
             wp_enqueue_style( 'bp-user-reviews-css', $this->url . 'assets/css/bp-user-reviews.css', array(), $this->version);
             wp_enqueue_style( 'font-awesome', $this->url . 'assets/css/font-awesome.min.css');
         }
@@ -680,8 +738,9 @@ if ( ! class_exists('BP_User_Reviews') ) :
         public function admin_screen_scripts($hook){
             global $post;
             if($hook === 'bp-user-reviews_page_bp-user-reviews-settings'
-               || ($hook == 'edit.php' && isset($_GET['post_type']) && $_GET['post_type'] == $this->post_type)
-               || ($hook == 'post.php' && isset($_GET['post']) && $post->post_type == $this->post_type)
+                || ($hook == 'edit.php' && isset($_GET['post_type']) && $_GET['post_type'] == $this->post_type)
+                || ($hook == 'post.php' && isset($_GET['post']) && $post->post_type == $this->post_type)
+                || ($hook == 'post-new.php' && isset($_GET['post_type']) && $_GET['post_type'] == $this->post_type)
             ):
                 $translation_array = array(
                     'ajax_url'   => admin_url('admin-ajax.php'),
@@ -719,8 +778,8 @@ if ( ! class_exists('BP_User_Reviews') ) :
 
         public function print_stars_admin($result, $stars){ ?>
             <span class="stars">
-                 <?php echo $this->print_stars($stars); ?>
-                <span class="active" style="width:<?php echo $result; ?>%">
+            <?php echo $this->print_stars($stars); ?>
+            <span class="active" style="width:<?php echo $result; ?>%">
                      <?php echo $this->print_stars($stars); ?>
                 </span>
             </span><?php
@@ -731,14 +790,15 @@ if ( ! class_exists('BP_User_Reviews') ) :
          */
         public function screen_content() {
             if( (($this->settings['access'] == 'registered') && is_user_logged_in()) ||  $this->settings['access'] == 'all'){
-                if(get_current_user_id() != bp_displayed_user_id()) {
-                   include($this->path . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'review-form.php');
+                if(get_current_user_id() != bp_displayed_user_id() &&
+                   apply_filters( 'bp_members_reviews_review_allowed', true, bp_loggedin_user_id(), bp_displayed_user_id() )
+                ) {
+                    include($this->path . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'review-form.php');
                 }
             }
 
             include($this->path . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'review-list.php');
         }
-
 
         public static function calc_rating($user_id){
             $reviews = new WP_Query(array(
@@ -784,10 +844,45 @@ if ( ! class_exists('BP_User_Reviews') ) :
 
         public function embed_rating($user_id = false){
             if($user_id == false) $user_id = bp_displayed_user_id();
-            BP_User_Reviews::calc_rating($user_id);
+            self::calc_rating($user_id);
             $rating = get_user_meta($user_id, 'bp-user-reviews', true);
 
             include($this->path . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'rating.php');
+        }
+
+        public static function get_username($user_id){
+
+            if( function_exists('bp_core_get_username') ){
+                return bp_core_get_username( $user_id, true, false );
+            }
+
+            $user = get_userdata($user_id);
+
+            return $user->user_login;
+        }
+
+        public static function get_user_display_name($user_id){
+
+            if( function_exists('bp_core_get_user_displayname') ){
+                return bp_core_get_user_displayname( $user_id );
+            }
+
+            $user = get_userdata($user_id);
+
+            return $user->display_name;
+        }
+
+        public static function get_user_link($user_id){
+
+            if( function_exists('bp_core_get_userlink') ){
+                return bp_core_get_userlink($user_id, false, true);
+            }
+
+            if( function_exists('bbp_get_user_profile_url') ){
+                return bbp_get_user_profile_url($user_id);
+            }
+
+            return false;
         }
 
         public function toSpam($post_id){
@@ -852,7 +947,7 @@ if ( ! class_exists('BP_User_Reviews') ) :
             echo '<a href="'.$link.'" class="button">'. _x( 'Spam', 'comment status' ) .'</a>';
         }
 
-        public function styles(){ ?> 
+        public function styles(){ ?>
             <style type="text/css">
                 <?php $color = $this->settings['starsColor']; ?>
                 .bp-users-reviews-stars span.star:before,
@@ -864,5 +959,11 @@ if ( ! class_exists('BP_User_Reviews') ) :
         <?php }
     }
 
-    $run = new BP_User_Reviews();
+    add_action('plugins_loaded', function(){
+        if( class_exists('BuddyPress') ) {
+            global $BP_Member_Reviews;
+            $BP_Member_Reviews = new BP_Member_Reviews();
+        }
+    });
+
 endif;
