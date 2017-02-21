@@ -1,12 +1,12 @@
 <?php
 /*
  @wordpress-plugin
- Plugin Name:       BP Member Reviews
- Plugin URI:        https://wordpress.org/plugins/bp-user-reviews/
+ Plugin Name:       GW BP Member Reviews
+ Plugin URI:        
  Description:       BuddyPress plugin to enable reviews and ratings of members.
- Version:           1.2.5
- Author:            wordplus, sooskriszta
- Author URI:        https://profiles.wordpress.org/wordplus/
+ Version:           2.0
+ Author:            James Kidd, wordplus, sooskriszta
+ Author URI:        
  Text Domain:       bp-user-reviews
  Domain Path:       /languages
  */
@@ -153,6 +153,9 @@ if ( ! class_exists('BP_Member_Reviews') ) :
                 case 'bp-user-reviews-user' :
                     echo $this->reviewed();
                     break;
+                    case 'bp-user-reviews-comment':
+                    echo $this->commented();
+                    break;
                 case 'bp-user-reviews-author' :
                     echo $this->author();
                     break;
@@ -170,6 +173,7 @@ if ( ! class_exists('BP_Member_Reviews') ) :
                 'bp-user-reviews-review' => __('Review', 'bp-user-reviews'),
                 'bp-user-reviews-user' => __('User', 'bp-user-reviews'),
                 'bp-user-reviews-author' => __('Author', 'bp-user-reviews'),
+                'bp-user-reviews-comment' => "Comment",
                 'date' => __('Date', 'bp-user-reviews')
             );
         }
@@ -477,10 +481,18 @@ if ( ! class_exists('BP_Member_Reviews') ) :
             update_post_meta( $post_id, 'review', $review );
 
             // Sanitize the user input.
-            $user_id = sanitize_text_field( $_POST['user_id'] );
+            $comment = sanitize_text_field( $_POST['comment'] );
 
             // Update the meta field.
-            update_post_meta( $post_id, 'user_id', $user_id );
+            update_post_meta( $post_id, 'comment', $comment );
+
+
+            // Removed this, why would you change the author?
+
+            // Sanitize the user input.
+            //$user_id = sanitize_text_field( $_POST['user_id'] );
+            // Update the meta field.
+            //update_post_meta( $post_id, 'user_id', $user_id );
 
             if( $type == 'multiple' && isset($_POST['criterions']) && is_array($_POST['criterions'])){
                 update_post_meta( $post_id, 'criterions', $_POST['criterions'] );
@@ -695,12 +707,24 @@ if ( ! class_exists('BP_Member_Reviews') ) :
         }
 
         /**
-         * Shows reviewed user
+         * Shows response message
          */
         public static function reviewed(){
             global $post;
 
             echo get_avatar($post->user_id, 25) . " " . bp_core_get_userlink( $post->user_id );
+        }
+        /**
+         * Shows reviewed user
+         */
+        public static function commented(){
+            global $post;
+            if(get_post_meta($post->ID,'comment',true) != false) {
+                echo(esc_attr(get_post_meta($post->ID,'comment',true)));
+            }
+            else {
+                echo "No Comment";
+            }
         }
 
         /**

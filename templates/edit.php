@@ -32,7 +32,7 @@
                     <?php $this->print_stars_admin($post->average, $post->stars); ?>
                 </span>
             </p>
-            <?php foreach ($criterions as $name => $value){ ?>
+            <?php if(is_array($criterions)) foreach ($criterions as $name => $value){ ?>
                 <p>
                     <b><?php echo $name; ?>:</b>
                     <span>
@@ -52,5 +52,13 @@
             <textarea name="review" style="width: 100%;height: 100px"><?php echo esc_attr($post->review); ?></textarea>
         </td>
     </tr>
+    <?php if(get_post_meta(get_the_ID(),'comment',true) != false) { ?>
+    <tr class="drone-row" valign="top">
+        <th class="drone-label" scope="row"><label>Comment</label></th>
+        <td>
+            <textarea name="comment" style="width: 100%;height: 100px"><?php echo esc_attr(get_post_meta($post->ID,'comment',true)); ?></textarea>
+        </td>
+    </tr>
+    <?php } ?>
     </tbody>
 </table>

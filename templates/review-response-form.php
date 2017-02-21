@@ -4,9 +4,10 @@
  */
 defined( 'ABSPATH' ) || exit; ?>    
 <?php 
-if(get_post_meta(get_the_ID(),'comment',true) != false) {
-    echo('<div><p><strong>'.bp_core_get_username(bp_displayed_user_id()).'</strong>: '.get_post_meta(get_the_ID(),'comment',true).'</p></div>');
-} elseif($this->settings['review'] == 'yes' && is_user_logged_in() && bp_displayed_user_id() == get_current_user_id()){ ?>
+if(esc_attr(get_post_meta(get_the_ID(),'comment',true)) != false) {
+echo('<br><br><h5>Response</h5> '.esc_attr(get_post_meta(get_the_ID(),'comment',true)));
+}
+elseif($this->settings['review'] == 'yes' && is_user_logged_in() && bp_displayed_user_id() == get_current_user_id()){ ?>
 
 
 <script>
@@ -35,19 +36,21 @@ if(get_post_meta(get_the_ID(),'comment',true) != false) {
             }
         );
     });
+$(document).ready(function () {
+$('form.bp-res-<?php echo get_the_ID() ?>').submit(function (event) {
+event.preventDefault();
+var html = '<form class="bp-user-reviews-response<?php echo get_the_ID() ?>"><h3>Add Response</h3><textarea name="response"></textarea> <br>       <input type="hidden" name="action" value="bp_user_review_response"><input type="hidden" name="review_id" value="<?php echo get_the_ID() ?>"><input type="hidden" name="user_id" value="<?php echo bp_displayed_user_id() ?>"><?php wp_nonce_field("bp-user-review-new-response-".bp_displayed_user_id()); ?><input type="submit" value="Submit">   </form>';
+$('form.bp-res-<?php echo get_the_ID() ?>').before(html);
+$('form.bp-res-<?php echo get_the_ID() ?>').slideUp();
+ } );
+ });
+
+
 })(jQuery)
 </script>
-<form class="bp-user-reviews-response<?php echo get_the_ID() ?>">
+<form class="bp-res-<?php echo get_the_ID() ?>"> <input type="submit" value="Respond"> </form>
 
 
-            <h2><?php _e('Add Response', 'bp-user-reviews-response'); ?></label></h2>
-        <textarea name="response"></textarea>
-        <input type="hidden" name="action" value="bp_user_review_response">
-    <input type="hidden" name="review_id" value="<?php echo get_the_ID() ?>">
-    <input type="hidden" name="user_id" value="<?php echo bp_displayed_user_id() ?>">
-    <?php wp_nonce_field('bp-user-review-new-response-'.bp_displayed_user_id()); ?>
-    <input type="submit" value="Submit">   
-</form>
 <?php } ?>
 
 
