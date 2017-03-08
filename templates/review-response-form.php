@@ -15,6 +15,16 @@ elseif($this->settings['review'] == 'yes' && is_user_logged_in() && bp_displayed
     
 
     $(document).ready(function () {
+
+    });
+$(document).ready(function () {
+$('form.bp-res-<?php echo get_the_ID() ?>').submit(function (event) {
+event.preventDefault();
+var html = '<form class="bp-user-reviews-response<?php echo get_the_ID() ?>"><h3>Add Response</h3><textarea name="response"></textarea> <br>       <input type="hidden" name="action" value="bp_user_review_response"><input type="hidden" name="review_id" value="<?php echo get_the_ID() ?>"><input type="hidden" name="user_id" value="<?php echo bp_displayed_user_id() ?>"><?php wp_nonce_field("bp-user-review-new-response-".bp_displayed_user_id()); ?><input type="submit" value="Submit">   </form>';
+$('form.bp-res-<?php echo get_the_ID() ?>').before(html);
+$('form.bp-res-<?php echo get_the_ID() ?>').slideUp();
+
+
         $('form.bp-user-reviews-response<?php echo get_the_ID() ?>').submit(function (event) {
                 event.preventDefault();
                 $('.bp-user-review-message').remove();
@@ -35,13 +45,11 @@ elseif($this->settings['review'] == 'yes' && is_user_logged_in() && bp_displayed
                 });
             }
         );
-    });
-$(document).ready(function () {
-$('form.bp-res-<?php echo get_the_ID() ?>').submit(function (event) {
-event.preventDefault();
-var html = '<form class="bp-user-reviews-response<?php echo get_the_ID() ?>"><h3>Add Response</h3><textarea name="response"></textarea> <br>       <input type="hidden" name="action" value="bp_user_review_response"><input type="hidden" name="review_id" value="<?php echo get_the_ID() ?>"><input type="hidden" name="user_id" value="<?php echo bp_displayed_user_id() ?>"><?php wp_nonce_field("bp-user-review-new-response-".bp_displayed_user_id()); ?><input type="submit" value="Submit">   </form>';
-$('form.bp-res-<?php echo get_the_ID() ?>').before(html);
-$('form.bp-res-<?php echo get_the_ID() ?>').slideUp();
+
+
+
+
+
  } );
  });
 

@@ -3,8 +3,8 @@
  @wordpress-plugin
  Plugin Name:       GW BP Member Reviews
  GitHub Plugin URI: Gippsland-Web/gw-bp-user-reviews      
- Description:       BuddyPress plugin to enable reviews and ratings of members. Forked at 1.2.5
- Version:           2.0
+ Description:       BuddyPress plugin to enable reviews and ratings of members. Forked from 1.2.5
+ Version:           2.0.1
  Author:            James Kidd, wordplus, sooskriszta
  Author URI:        
  Text Domain:       bp-user-reviews
